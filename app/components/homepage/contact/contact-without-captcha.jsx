@@ -22,36 +22,49 @@ function ContactWithoutCaptcha() {
   };
 
   const handleSendMail = async (e) => {
-    e.preventDefault();
-    if (!userInput.email || !userInput.message || !userInput.name) {
-      setError({ ...error, required: true });
-      return;
-    } else if (error.email) {
-      return;
-    } else {
-      setError({ ...error, required: false });
-    };
-
-    const serviceID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
-    const templateID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
-    const options = { publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY };
-
-    try {
-      const res = await emailjs.send(serviceID, templateID, userInput, options);
-      const teleRes = await axios.post(`${process.env.NEXT_PUBLIC_APP_URL}/api/contact`, userInput);
-
-      if (res.status === 200 || teleRes.status === 200) {
-        toast.success('Message sent successfully!');
-        setUserInput({
-          name: '',
-          email: '',
-          message: '',
-        });
-      };
-    } catch (error) {
-      toast.error(error?.text || error);
-    };
+  e.preventDefault();
+  if (!userInput.email || !userInput.message || !userInput.name) {
+    setError({ ...error, required: true });
+    return;
+  } else if (error.email) {
+    return;
+  } else {
+    setError({ ...error, required: false });
   };
+
+  const serviceID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
+  const templateID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;           // Your inquiry email template ID
+  const autoReplyTemplateID = process.env.NEXT_PUBLIC_EMAILJS_AUTO_REPLY_TEMPLATE_ID;  // Your auto-reply template ID
+  const options = { publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY };
+
+  try {
+    // Send main inquiry email (to you)
+    const res = await emailjs.send(serviceID, templateID, userInput, options);
+
+    // Send auto-reply email (to client)
+    // Use fields required by your auto-reply template, for example:
+    await emailjs.send(serviceID, autoReplyTemplateID, {
+      to_email: userInput.email,        // client email
+      from_name: userInput.name,        // client name (for personalization)
+      // add any other dynamic params your template needs
+    }, options);
+
+    // Optional: your backend API call if you still want it
+    // await axios.post(`${process.env.NEXT_PUBLIC_APP_URL}/api/contact`, userInput);
+
+    if (res.status === 200) {
+      toast.success('Message sent successfully! Auto-reply sent.');
+      setUserInput({
+        name: '',
+        email: '',
+        message: '',
+      });
+    };
+  } catch (error) {
+    toast.error(error?.text || error.message || error);
+  };
+};
+
 
   return (
     <div className="">
